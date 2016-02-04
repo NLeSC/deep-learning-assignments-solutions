@@ -1,7 +1,7 @@
 import numpy as np
 from random import shuffle
 
-def svm_loss_naive(W, X, y, reg):
+def svm_loss_naive(W, X, y, reg, delta=1):
   """
   Structured SVM loss function, naive implementation (with loops).
 
@@ -28,16 +28,25 @@ def svm_loss_naive(W, X, y, reg):
   for i in xrange(num_train):
     scores = X[i].dot(W)
     correct_class_score = scores[y[i]]
+
+    count = 0
     for j in xrange(num_classes):
       if j == y[i]:
         continue
-      margin = scores[j] - correct_class_score + 1 # note delta = 1
+      margin = scores[j] - correct_class_score + delta
       if margin > 0:
         loss += margin
+        count += 1
+        dW[:,j] += X[i].T
+
+    dW[:,y[i]] -= count * X[i].T
+
+
 
   # Right now the loss is a sum over all training examples, but we want it
   # to be an average instead so we divide by num_train.
   loss /= num_train
+  dW /= num_train
 
   # Add regularization to the loss.
   loss += 0.5 * reg * np.sum(W * W)
