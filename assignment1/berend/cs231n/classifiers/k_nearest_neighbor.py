@@ -1,5 +1,5 @@
 import numpy as np
-import numexpr as ne;
+#import numexpr as ne;
 
 class KNearestNeighbor:
   """ a kNN classifier with L2 distance """
