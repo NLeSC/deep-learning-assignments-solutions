@@ -85,63 +85,28 @@ def svm_loss_vectorized(W, X, y, reg, delta=1):
   vMargin = (vScores.T - vCorrect_class_score + 1).T
   vLoss = 0.0
 
-  for i in xrange(num_train):
-    scores = X[i].dot(W)
-    assert vScores[i].sum()==scores.sum()
-
-    correct_class_score = scores[y[i]]
-    assert correct_class_score == vCorrect_class_score[i]
-
-    vMarginI = scores - correct_class_score + 1
-    assert vMarginI.sum() == vMargin[i].sum()
-    assert vMarginI.shape == vMargin[i].shape
-
-    for j in xrange(num_classes):
-      if j == y[i]:
-        continue
-      margin = scores[j] - correct_class_score + 1 # note delta = 1
-      assert margin == vMarginI[j]
-
-      if margin > 0:
-        loss += margin
-        # Compute gradients (one inner and one outer sum)
-        # Wonderfully compact and hard to read
-        dW[:,y[i]] -= X[i,:]
-        dW[:,j] += X[i,:]
-
   # if j == y[i] do not include in loss (or dW)
   mask = np.zeros(vMargin.shape)
   mask[range(500),y] = 1
 
   vLoss = (vMargin-mask)[vMargin>0].sum()
-  assert np.abs(loss-vLoss) < 0.0001
 
-
-  vdWCorr = np.zeros(W.shape) # initialize the gradient as zero
-  for i in xrange(num_train):
-    for j in xrange(num_classes):
-      if vMargin[i,j] > 0:
-        vdW[:,y[i]] -= X[i,:]
-        vdW[:,j] += X[i,:]
-
-        if j == y[i]:
-          vdWCorr[:,y[i]] += X[i,:]
-          vdWCorr[:,j] -= X[i,:]
-
-  vdW1 = np.zeros(W.shape) # initialize the gradient as zero
+  vdW = np.zeros(W.shape)
   i,j = np.nonzero(vMargin>0)
   for ii,jj in zip(i,j):
-    vdW1[:,y[ii]] -= X[ii,:]
-    vdW1[:,jj] += X[ii,:]
+    vdW[:,y[ii]] -= X[ii,:]
+    vdW[:,jj] += X[ii,:]
 
-
-  # print 'xxxxxx', (vdW-vdW1).sum()
-  assert np.abs(vdW-vdW1).sum() < 1e-8
+  idx = (j == y[i])
+  vdWCorr = np.zeros(W.shape)# if j == y[i]
+  for ii,jj in zip(i[idx],j[idx]):
+    vdWCorr[:,y[ii]] += X[ii,:]
+    vdWCorr[:,jj] -= X[ii,:]
 
   vdW -= vdWCorr
-  # print 'xxxxxx', (dW-vdW).sum()
-  assert np.abs(dW-vdW).sum() < 1e-8
 
+  loss = vLoss
+  dW = vdW
 
   # Right now the loss is a sum over all training examples, but we want it
   # to be an average instead so we divide by num_train.
