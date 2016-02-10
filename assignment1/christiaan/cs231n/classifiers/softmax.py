@@ -42,19 +42,19 @@ def softmax_loss_naive(W, X, y, reg):
   for im in range(0, num_images):
     dW_im = np.zeros_like(dW)
     scores_im = W.T.dot(X[im,:])
-    log_c = -np.max(scores_im)
+    log_c = -np.max(scores_im) # try 0
     correct_class = y[im]
     exp_correct_class = np.exp(scores_im[correct_class] + log_c)
 
-    sum_exp_classes = *.py0
+    sum_exp_classes = 0
     for cl in range(0, num_classes):
       sum_exp_classes += np.exp(scores_im[cl] + log_c)
 
     for cl in range(0, num_classes):
       exp_current_class = np.exp(scores_im[cl] + log_c)
       softmax_current_class = exp_current_class / sum_exp_classes
-      if cl == y[im]:
-        dW_im[:,cl] = (-1 - softmax_current_class) * X[im,:]
+      if cl == correct_class:
+        dW_im[:,cl] = (-1 + softmax_current_class) * X[im,:]
       else:
         dW_im[:,cl] = softmax_current_class * X[im,:]
     softmax_correct_class = exp_correct_class / sum_exp_classes
