@@ -87,7 +87,7 @@ def svm_loss_vectorized(W, X, y, reg, delta=1):
 
   # if j == y[i] do not include in loss (or dW)
   mask = np.zeros(vMargin.shape)
-  mask[range(500),y] = 1
+  mask[range(mask.shape[0]),y] = 1
 
   vLoss = (vMargin-mask)[vMargin>0].sum()
 
