@@ -74,14 +74,11 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
-    out1 = (X.dot(W1) + b1) #first layer
-    out1[out1<0] =0 # ReLU
-    scores = out1.dot(W2) + b2 #second layer
     pass
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
-
+    
     # If the targets are not given then jump out, we're done
     if y is None:
       return scores
@@ -95,11 +92,6 @@ class TwoLayerNet(object):
     # classifier loss. So that your results match ours, multiply the            #
     # regularization loss by 0.5                                                #
     #############################################################################
-    for i in classes
-    exp(y[i]) / sum(exp(scores[not classes]))
-    # data loss based on ... -log()
-    # L2 regularization loss for W1
-    # L2 regularization loss for W2
     pass
     #############################################################################
     #                              END OF YOUR CODE                             #
@@ -222,3 +214,5 @@ class TwoLayerNet(object):
     ###########################################################################
 
     return y_pred
+
+
