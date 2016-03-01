@@ -74,22 +74,17 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
-    layer1 = X.dot(W1) + b1 # Forward 1st layer
-    layer1[layer1<0] = 0    # ReLU
-    layer2 = layer1.dot(W2) + b2 # Forward 2nd layer
-    scores = layer2         # This seems correct, but maybe check why ReLU only on first layer
+    pass
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
-
+    
     # If the targets are not given then jump out, we're done
     if y is None:
       return scores
 
     # Compute the loss
-    loss = 0.0
-    dW1 = np.zeros_like(W1)
-    dW2 = np.zeros_like(W2)
+    loss = None
     #############################################################################
     # TODO: Finish the forward pass, and compute the loss. This should include  #
     # both the data loss and L2 regularization for W1 and W2. Store the result  #
@@ -97,15 +92,7 @@ class TwoLayerNet(object):
     # classifier loss. So that your results match ours, multiply the            #
     # regularization loss by 0.5                                                #
     #############################################################################
-    num_classes = W2.shape[1]
-    num_train = X.shape[0]
-
-    normScores = (scores - scores.max()).T
-    correctScores = normScores[y,range(num_train)]
-    dataLoss = -np.mean( np.log(np.exp(correctScores)/np.sum(np.exp(normScores))) )
-    # regLoss = np.sum(W1*W1) + np.sum(W2*W2)
-    regLoss = np.sum(W1*W1) + np.sum(W2*W2)
-    loss = dataLoss + 0.5 * reg * regLoss
+    pass
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -227,3 +214,5 @@ class TwoLayerNet(object):
     ###########################################################################
 
     return y_pred
+
+
