@@ -15,7 +15,6 @@ def svm_loss_naive(W, X, y, reg):
     - loss as single float
     - gradient with respect to weights W; an array of same shape as W
     """
-    h = 0.00001
     dW = np.zeros(W.shape)  # initialize the gradient as zero
 
     # compute the loss and the gradient
@@ -32,13 +31,10 @@ def svm_loss_naive(W, X, y, reg):
                 continue
             margin = scores[j] - correct_class_score + 1  # note delta = 1
             if margin > 0:
-                count_delta += 1
                 loss += margin
-                dW[j] += X[:, i]
-        delta_total += count_delta
-        dW[y[i]] -= count_delta * X[:, i]
+                dW[j] += X[:, i].T
+                dW[y[i]] -= X[:, i].T
 
-    print "Naive total delta: ", delta_total
     # Right now the loss is a sum over all training examples, but we want it
     # to be an average instead so we divide by num_train.
     loss /= num_train
@@ -46,6 +42,7 @@ def svm_loss_naive(W, X, y, reg):
 
     # Add regularization to the loss.
     loss += 0.5 * reg * np.sum(W * W)
+    dW += reg*W
     #dW += 0.5 * reg * np.sum(dW * dW)
 
     #############################################################################
@@ -66,10 +63,6 @@ def svm_loss_vectorized(W, X, y, reg):
 
     Inputs and outputs are the same as svm_loss_naive.
     """
-    loss = 0.0
-    dW = np.zeros(W.shape)  # initialize the gradient as zero
-
-    num_classes = W.shape[0]
     num_train = X.shape[1]
     #############################################################################
     # TODO:                                                                     #
@@ -84,21 +77,10 @@ def svm_loss_vectorized(W, X, y, reg):
     margins[correct_indices[0], correct_indices[1]] = 0
 
     loss = np.sum(margins)
-    count_delta = np.sum(margins > 0)
-#    loss_row_sum = np.zeros(X.shape[0])
-#    for j in xrange(num_classes):
-#            if j == y[i]:
-#                continue
-#            loss += np.sum(margins[margins > 0])
-#            count_delta += np.sum(margins > 0)
-#            row_sum = np.sum(X[:, margins > 0], axis=1);
-#            loss_row_sum += row_sum
-#            dW[j] += row_sum
-#    dW[y[i]] -= count_delta * loss_row_sum
 
-    print "Vectorized total delta: ", count_delta
     loss /= num_train
     loss += 0.5 * reg * np.sum(W * W)
+
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -112,7 +94,12 @@ def svm_loss_vectorized(W, X, y, reg):
     # to reuse some of the intermediate values that you used to compute the     #
     # loss.                                                                     #
     #############################################################################
-    pass
+    counts = (margins > 0).astype(int)
+    counts[correct_indices[0], correct_indices[1]] = -np.sum(counts, axis=0)
+    dW = counts.dot(X.T)
+
+    dW /= num_train
+    dW += reg*W
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################

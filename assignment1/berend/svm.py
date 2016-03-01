@@ -68,7 +68,7 @@ num_classes = len(classes)
 #        plt.axis('off')
 #        if i == 0:
 #            plt.title(cls)
-#plt.show()#
+#plt.show()
 
 
 # In[4]:
@@ -77,9 +77,9 @@ num_classes = len(classes)
 # 49000
 # 1000
 # 1000
-num_training = 4900
-num_validation = 100
-num_test = 100
+num_training = 49000
+num_validation = 1000
+num_test = 1000
 
 # Our validation set will be num_validation points from the original
 # training set.
@@ -240,15 +240,14 @@ print 'difference: %f' % difference
 
 # ### Stochastic Gradient Descent
 #
-# We now have vectorized and efficient expressions for the loss, the gradient and our gradient matches the numerical gradient. We are therefore ready to do SGD to minimize the loss.
-
-# In[ ]:
+# We now have vectorized and efficient expressions for the loss, the gradient and our gradient matches the numerical
+# gradient. We are therefore ready to do SGD to minimize the loss.
 
 # Now implement SGD in LinearSVM.train() function and run it with the code below
 from cs231n.classifiers import LinearSVM
 svm = LinearSVM()
 tic = time.time()
-loss_hist = svm.train(X_train, y_train, learning_rate=1e-7, reg=5e4,
+loss_hist = svm.train(X_train, y_train, learning_rate=1e-6, reg=1e5,
                       num_iters=1500, verbose=True)
 toc = time.time()
 print 'That took %fs' % (toc - tic)
@@ -261,6 +260,7 @@ print 'That took %fs' % (toc - tic)
 plt.plot(loss_hist)
 plt.xlabel('Iteration number')
 plt.ylabel('Loss value')
+plt.show()
 
 
 # In[ ]:
@@ -279,8 +279,8 @@ print 'validation accuracy: %f' % (np.mean(y_val == y_val_pred), )
 # learning rate). You should experiment with different ranges for the learning
 # rates and regularization strengths; if you are careful you should be able to
 # get a classification accuracy of about 0.4 on the validation set.
-learning_rates = [1e-7, 5e-5]
-regularization_strengths = [5e4, 1e5]
+learning_rates = [6e-7] #np.array(range(6))/10000000.0
+regularization_strengths = [43600.0] # + np.array(range(0,30))*100.0
 
 # results is dictionary mapping tuples of the form
 # (learning_rate, regularization_strength) to tuples of the form
@@ -289,6 +289,7 @@ regularization_strengths = [5e4, 1e5]
 results = {}
 best_val = -1   # The highest validation accuracy that we have seen so far.
 best_svm = None # The LinearSVM object that achieved the highest validation rate.
+best_settings = ();
 
 ################################################################################
 # TODO:                                                                        #
@@ -304,7 +305,24 @@ best_svm = None # The LinearSVM object that achieved the highest validation rate
 # confident that your validation code works, you should rerun the validation   #
 # code with a larger value for num_iters.                                      #
 ################################################################################
-pass
+for lr in learning_rates:
+    for reg in regularization_strengths:
+        svm = LinearSVM()
+        loss_hist = svm.train(X_train, y_train, learning_rate=lr, reg=reg,
+                                num_iters=500, verbose=True)
+        y_train_pred = svm.predict(X_train)
+        training_accuracy = np.mean(y_train == y_train_pred)
+        print 'training accuracy: %f' % (training_accuracy, )
+        y_val_pred = svm.predict(X_val)
+        validation_accuracy = np.mean(y_val == y_val_pred)
+        print 'validation accuracy: %f' % (validation_accuracy, )
+
+        results[(lr, reg)] = (training_accuracy, validation_accuracy)
+
+        if(validation_accuracy > best_val):
+            best_val = validation_accuracy
+            best_svm = svm
+            best_settings = (lr, reg)
 ################################################################################
 #                              END OF YOUR CODE                                #
 ################################################################################
@@ -319,6 +337,11 @@ print 'best validation accuracy achieved during cross-validation: %f' % best_val
 
 
 # In[ ]:
+svm = LinearSVM()
+loss_hist = svm.train(X_train, y_train, learning_rate=best_settings[0], reg=best_settings[1],
+                                num_iters=5000, verbose=True)
+
+best_svm = svm
 
 # Visualize the cross-validation results
 import math
@@ -340,6 +363,8 @@ plt.scatter(x_scatter, y_scatter, sz)
 plt.xlabel('log learning rate')
 plt.ylabel('log regularization strength')
 plt.title('CIFAR-10 validation accuracy')
+
+plt.show()
 
 
 # In[ ]:
@@ -368,6 +393,7 @@ for i in xrange(10):
   plt.axis('off')
   plt.title(classes[i])
 
+plt.show()
 
 # ### Inline question 2:
 # Describe what your visualized SVM weights look like, and offer a brief explanation for why they look they way that they do.

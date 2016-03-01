@@ -18,7 +18,7 @@ def extract_features(imgs, feature_fns, verbose=False):
   - verbose: Boolean; if true, print progress.
 
   Returns:
-  An array of shape (F_1 + ... + F_k, N) where each column is the concatenation
+  An array of shape (N, F_1 + ... + F_k) where each column is the concatenation
   of all features for a single image.
   """
   num_images = imgs.shape[0]
@@ -37,15 +37,15 @@ def extract_features(imgs, feature_fns, verbose=False):
   # Now that we know the dimensions of the features, we can allocate a single
   # big array to store all features as columns.
   total_feature_dim = sum(feature_dims)
-  imgs_features = np.zeros((total_feature_dim, num_images))
-  imgs_features[:total_feature_dim, 0] = np.hstack(first_image_features)
+  imgs_features = np.zeros((num_images, total_feature_dim))
+  imgs_features[0] = np.hstack(first_image_features).T
 
   # Extract features for the rest of the images.
   for i in xrange(1, num_images):
     idx = 0
     for feature_fn, feature_dim in zip(feature_fns, feature_dims):
       next_idx = idx + feature_dim
-      imgs_features[idx:next_idx, i] = feature_fn(imgs[i].squeeze())
+      imgs_features[i, idx:next_idx] = feature_fn(imgs[i].squeeze())
       idx = next_idx
     if verbose and i % 1000 == 0:
       print 'Done extracting features for %d / %d images' % (i, num_images)
