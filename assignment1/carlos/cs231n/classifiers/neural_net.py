@@ -88,8 +88,6 @@ class TwoLayerNet(object):
 
     # Compute the loss
     loss = 0.0
-    dW1 = np.zeros_like(W1)
-    dW2 = np.zeros_like(W2)
     #############################################################################
     # TODO: Finish the forward pass, and compute the loss. This should include  #
     # both the data loss and L2 regularization for W1 and W2. Store the result  #
@@ -97,15 +95,16 @@ class TwoLayerNet(object):
     # classifier loss. So that your results match ours, multiply the            #
     # regularization loss by 0.5                                                #
     #############################################################################
-    num_classes = W2.shape[1]
-    num_train = X.shape[0]
-
+    # Reminders:
+    # N is the Number of samples in training batch
     normScores = (scores - scores.max()).T
-    correctScores = normScores[y,range(num_train)]
-    dataLoss = -np.mean( np.log(np.exp(correctScores)/np.sum(np.exp(normScores))) )
-    # regLoss = np.sum(W1*W1) + np.sum(W2*W2)
-    regLoss = np.sum(W1*W1) + np.sum(W2*W2)
-    loss = dataLoss + 0.5 * reg * regLoss
+    correctScores = normScores[y,range(N)]
+
+    Li = -np.log( np.exp(correctScores)/np.sum(np.exp(normScores), axis=0))
+    dataLoss = np.mean( Li )
+    regLoss = 0.5 * reg * (np.sum(W1*W1) + np.sum(W2*W2))
+
+    loss = dataLoss + regLoss
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -117,7 +116,10 @@ class TwoLayerNet(object):
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
-    pass
+    grads['W1'] = 0
+    grads['W2'] = 0
+    grads['b1'] = 0
+    grads['b2'] = 0
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
