@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 class TwoLayerNet(object):
@@ -74,10 +73,11 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
-    layer1 = X.dot(W1) + b1 # Forward 1st layer
-    layer1[layer1<0] = 0    # ReLU
+    layer1 = X.dot(W1) + b1      # Forward 1st layer
+    layer1[layer1<0] = 0         # ReLU
     layer2 = layer1.dot(W2) + b2 # Forward 2nd layer
-    scores = layer2         # This seems correct, but maybe check why ReLU only on first layer
+    scores = layer2              # This seems correct, but maybe check why ReLU only on first layer
+
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -95,16 +95,19 @@ class TwoLayerNet(object):
     # classifier loss. So that your results match ours, multiply the            #
     # regularization loss by 0.5                                                #
     #############################################################################
-    # Reminders:
     # N is the Number of samples in training batch
-    normScores = (scores - scores.max()).T
-    correctScores = normScores[y,range(N)]
+    maxScores = scores.max()
+    fj = (scores - maxScores).T      # normalize Scores
+    fyi = fj[y,range(N)]             # correct scores
 
-    Li = -np.log( np.exp(correctScores)/np.sum(np.exp(normScores), axis=0))
-    dataLoss = np.mean( Li )
-    regLoss = 0.5 * reg * (np.sum(W1*W1) + np.sum(W2*W2))
+    # Li = -np.log( np.exp(fyi)/np.sum(np.exp(fj), axis=0))
+    # or alternatively -- equivalent expressions
+    Li = -fyi + np.log(np.sum(np.exp(fj), axis=0))
 
-    loss = dataLoss + regLoss
+    mu_Li = np.mean( Li )                               # dataLoss
+    RW = 0.5 * reg * (np.sum(W1*W1) + np.sum(W2*W2))    # regLoss
+
+    loss = mu_Li + RW
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -116,10 +119,35 @@ class TwoLayerNet(object):
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
-    grads['W1'] = 0
-    grads['W2'] = 0
-    grads['b1'] = 0
-    grads['b2'] = 0
+
+    dfj = (np.exp(fj)/np.sum(np.exp(fj), axis = 0)).T
+    dfyi = np.zeros(fj.shape)
+    dfyi[y,range(N)] = 1
+
+    dfj = (np.exp(fj)/np.sum(np.exp(fj), axis = 0))
+    dLi = (dfj - dfyi)/N
+
+    db2 = dLi.sum(axis=1)
+    dW2 = dLi.dot(layer1).T + reg*W2
+
+    dLayer1 = dLi.T.dot(W2.T)
+    dLayer1[layer1<=0] = 0
+
+    db1 = dLayer1.sum(axis=0)
+    dW1 = dLayer1.T.dot(X).T + reg*W1
+
+    assert db2.shape==b2.shape
+    assert dW2.shape==W2.shape
+    assert db1.shape==b1.shape
+    assert dW1.shape==W1.shape
+
+    grads = {
+        'b2': db2,
+        'W2': dW2,
+        'b1': db1,
+        'W1': dW1
+    }
+
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -155,6 +183,8 @@ class TwoLayerNet(object):
     train_acc_history = []
     val_acc_history = []
 
+    idxItems = range(num_train)
+
     for it in xrange(num_iters):
       X_batch = None
       y_batch = None
@@ -163,7 +193,9 @@ class TwoLayerNet(object):
       # TODO: Create a random minibatch of training data and labels, storing  #
       # them in X_batch and y_batch respectively.                             #
       #########################################################################
-      pass
+      selectIdx = np.random.choice(idxItems, size=batch_size, replace=True)
+      X_batch = X[selectIdx,:]
+      y_batch = y[selectIdx]
       #########################################################################
       #                             END OF YOUR CODE                          #
       #########################################################################
@@ -178,7 +210,8 @@ class TwoLayerNet(object):
       # using stochastic gradient descent. You'll need to use the gradients   #
       # stored in the grads dictionary defined above.                         #
       #########################################################################
-      pass
+      for paramName in self.params:
+          self.params[paramName] -= learning_rate * grads[paramName]
       #########################################################################
       #                             END OF YOUR CODE                          #
       #########################################################################
@@ -223,7 +256,7 @@ class TwoLayerNet(object):
     ###########################################################################
     # TODO: Implement this function; it should be VERY simple!                #
     ###########################################################################
-    pass
+    y_pred = self.loss(X, y=None, reg=0.0).argmax(axis=1)
     ###########################################################################
     #                              END OF YOUR CODE                           #
     ###########################################################################
