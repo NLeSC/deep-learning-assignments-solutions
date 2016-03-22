@@ -74,7 +74,13 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
-    pass
+    num_classes = W2.shape[1]
+    num_images = X.shape[0]
+
+    H1 = W1.T.dot(X.T).T + b1
+    relu1 = np.maximum(H1, np.zeros_like(H1))
+    scores = W2.T.dot(relu1.T).T + b2
+
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -92,19 +98,64 @@ class TwoLayerNet(object):
     # classifier loss. So that your results match ours, multiply the            #
     # regularization loss by 0.5                                                #
     #############################################################################
-    pass
+    log_c = -np.max(scores, axis=1)
+    exp_scores = np.exp((scores.T + log_c).T)
+    exp_correct_class = exp_scores[range(len(y)),y]
+    sum_exp_classes = np.sum(exp_scores, axis = 1)
+    softmax = exp_correct_class / sum_exp_classes
+    sum_loss = -np.log(softmax)
+    softmax_loss = np.mean(sum_loss)
+
+    W = np.hstack((W1.flatten(), W2.flatten(), b1.flatten(), b2.flatten()))
+
+    regularization = 0.5 * reg * (np.sum(W1 * W1) + np.sum(W2 * W2))
+    # regularization = 0.5 * reg * np.sum(W * W)
+    loss = softmax_loss + regularization
+    ### Note to self: Scores is correct but loss isn't yet.
+    # I think it isn't the regularization (alone) as that term is much smaller
+    # than the discrepancy between the correct loss and mine.
+
+
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
 
     # Backward pass: compute gradients
     grads = {}
+    dW1 = np.zeros_like(W1)
+    dW2 = np.zeros_like(W2)
+    db1 = np.zeros_like(b1)
+    db2 = np.zeros_like(b2)
     #############################################################################
     # TODO: Compute the backward pass, computing the derivatives of the weights #
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
-    pass
+
+    ### Gradient of loss wrt parameters through regularization
+    dRegularization = 1.0
+    dW1 += dRegularization * reg * W1
+    dW2 += dRegularization * reg * W2
+
+    ### Gradient of loss wrt scores
+    dSoftmax_loss = 1.0
+    dSum_loss = (1.0 / num_images) * dSoftmax_loss
+    dSoftmax = (-1.0 / softmax) * dSum_loss
+    dSum_exp_classes = - (sum_exp_classes * sum_exp_classes) * dSoftmax
+    dExp_correct_class = 1.0 * dSoftmax
+    dExp_scores = np.asarray([dSum_exp_classes]).T * np.ones((1.0, num_classes))
+    dExp_scores[range(len(y)),y] += dExp_correct_class
+    dScores = exp_scores * dExp_scores
+
+    ### Gradient of scores wrt parameters
+    db2 += np.mean(dScores, axis=0)
+    dW2 += np.mean(relu1.T.dot(dScores), axis=0)
+    dRelu1 = W2.dot(dScores.T)
+    dH1 = (H1 > 0) * dRelu1.T
+    db1 += np.mean(dH1, axis=0)
+    dW1 += X.T.dot(dH1)
+
+    grads = {'W1' : dW1, 'W2' : dW2, 'b1' : db1, 'b2' : db2}
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
