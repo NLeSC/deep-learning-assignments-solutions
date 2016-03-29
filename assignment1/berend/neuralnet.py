@@ -180,33 +180,33 @@ def show_net_weights(net):
 best_net = None
 best_loss = float('inf')
 
-#rates = [0.0017,0.0018,0.0019,0.002]
-#
-# for rate in rates:
-#     net = TwoLayerNet(input_size, hidden_size, num_classes)
-#
-#     # Train the network
-#     stats = net.train(X_train, y_train, X_val, y_val,
-#                 num_iters=1000, batch_size=200,
-#                 learning_rate=rate, learning_rate_decay=0.98,
-#                 reg=0.3, verbose=False)
-#
-#     loss_avg = np.mean(stats['loss_history'][-1])
-#     print "Rate: ", rate, " loss: ", loss_avg
-#
-#     val_acc = (net.predict(X_val) == y_val).mean()
-#     print 'Validation accuracy: ', val_acc
-#
-#     if val_acc > best_loss:
-#         best_net = net
-#         best_loss = val_acc
+rates = [0.1,0.01,0.001]
 
-net = TwoLayerNet(input_size, hidden_size, num_classes)
-stats = net.train(X_train, y_train, X_val, y_val,
-                num_iters=10000, batch_size=200,
-                learning_rate=0.0019, learning_rate_decay=0.98,
-                reg=0.3, verbose=True)
-show_net_weights(net)
+for rate in rates:
+    net = TwoLayerNet(input_size, hidden_size, num_classes)
+
+    # Train the network
+    stats = net.train(X_train, y_train, X_val, y_val,
+                num_iters=1000, batch_size=200,
+                learning_rate=rate, learning_rate_decay=0.98,
+                reg=0.3, verbose=False)
+
+    loss_avg = np.mean(stats['loss_history'][-1])
+    print "Rate: ", rate, " loss: ", loss_avg
+
+    val_acc = (net.predict(X_val) == y_val).mean()
+    print 'Validation accuracy: ', val_acc
+
+    if val_acc > best_loss:
+        best_net = net
+        best_loss = val_acc
+
+# net = TwoLayerNet(input_size, hidden_size, num_classes)
+# stats = net.train(X_train, y_train, X_val, y_val,
+#                 num_iters=10000, batch_size=200,
+#                 learning_rate=0.0019, learning_rate_decay=0.98,
+#                 reg=0.3, verbose=True)
+show_net_weights(best_net)
 
 plt.subplot(2, 1, 1)
 plt.plot(stats['loss_history'])
