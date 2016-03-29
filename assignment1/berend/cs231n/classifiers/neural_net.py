@@ -86,15 +86,15 @@ class TwoLayerNet(object):
         # q5 = q4 + b2
         # q6 = softmax(q5)
 
-        #caluclate first layer
+        # Calculate first layer
         q1 = X.dot(W1)
 
         q2 = q1 + b1
 
         # Apply activation function
-        q3 = q2
-        q3[q3 < 0] = 0
+        q3 = np.maximum(q2, 0)
 
+        # Calculate second layer
         q4 = q3.dot(W2)
         q5 = q4 + b2
 
@@ -115,6 +115,7 @@ class TwoLayerNet(object):
         # classifier loss. So that your results match ours, multiply the            #
         # regularization loss by 0.5                                                #
         #############################################################################
+        np.seterr(all='raise')
         correct_indices = np.array([range(N), y])
 
         # print -correct_class_score + np.log(np.sum(np.exp(scores), axis=1))
@@ -123,9 +124,13 @@ class TwoLayerNet(object):
         exp_scores = np.exp(scores)
         summation = np.sum(exp_scores, axis=1, keepdims=True)
         #assert((summation > 0).all())
-        sigmoid = exp_scores / summation
+        probabilities = exp_scores / summation
         #assert((sigmoid > 0).all())
-        prob_correct = sigmoid[correct_indices[0], correct_indices[1]]
+        prob_correct = probabilities[correct_indices[0], correct_indices[1]]
+
+        # make sure we don't get a log of 0 error
+        eps = 1e-50
+        prob_correct[prob_correct < eps] = eps
 
         #print "Calculating log of: ", prob_correct
         log_sigmoid = -np.log(prob_correct)
@@ -157,7 +162,7 @@ class TwoLayerNet(object):
         # dq3 = 0/1 * dq4
         # dq4 = W2 * dq5
 
-        dscores = sigmoid
+        dscores = probabilities
         dscores[correct_indices[0], correct_indices[1]] -= 1
         dscores /= N
 
@@ -222,7 +227,7 @@ class TwoLayerNet(object):
             # them in X_batch and y_batch respectively.                             #
             #########################################################################
             indices = np.random.choice(X.shape[0], size=batch_size)
-            X_batch = X[indices,:]
+            X_batch = X[indices]
             y_batch = y[indices]
             #########################################################################
             #                             END OF YOUR CODE                          #
@@ -239,7 +244,7 @@ class TwoLayerNet(object):
             # stored in the grads dictionary defined above.                         #
             #########################################################################
             for param_name in grads:
-                self.params[param_name] = self.params[param_name] - (learning_rate * grads[param_name])
+                self.params[param_name] -= learning_rate * grads[param_name]
             #########################################################################
             #                             END OF YOUR CODE                          #
             #########################################################################
@@ -296,20 +301,18 @@ class TwoLayerNet(object):
         # Store the result in the scores variable, which should be an array of      #
         # shape (N, D).                                                             #
         #############################################################################
-        #caluclate first layer
+
+        # Calculate first layer
         hidden = X.dot(W1) + b1
         # Apply activation function
-        hidden[hidden < 0] = 0
-        #calculate second layar
-        scores = hidden.dot(W2) + b2
+        act = np.maximum(hidden, 0)
+        # Calculate second layer
+        scores = act.dot(W2) + b2
 
-        # print -correct_class_score + np.log(np.sum(np.exp(scores), axis=1))
         scores -= np.max(scores, axis=1, keepdims=True)
         exp_scores = np.exp(scores)
         summation = np.sum(exp_scores, axis=1, keepdims=True)
-        sigmoid = exp_scores / summation
-
-        probabilities = -np.log(sigmoid)
+        probabilities = exp_scores / summation
 
         y_pred = np.argmax(probabilities, axis=1)
         ###########################################################################
