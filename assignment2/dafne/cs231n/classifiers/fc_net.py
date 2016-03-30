@@ -108,7 +108,7 @@ class TwoLayerNet(object):
     # of 0.5 to simplify the expression for the gradient.                      #
     ############################################################################
     loss, dl2 = softmax_loss(layer2, y)
-    loss += 0.5*self.reg * (np.sum(W1*W1) + np.sum(W2*W2) + np.sum(b1*b1) + np.sum(b2*b2))
+    loss += 0.5*self.reg * (np.sum(W1*W1) + np.sum(W2*W2))
     
     ######################################################################
     dl1, dw2, db2 = affine_backward(dl2, cache2)
