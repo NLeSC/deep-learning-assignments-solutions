@@ -164,7 +164,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
   out, cache = None, None
   if mode == 'train':
     #############################################################################
-    # TODO: Implement the training-time forward pass for batch normalization.   #
+    # Implement the training-time forward pass for batch normalization.   #
     # Use minibatch statistics to compute the mean and variance, use these      #
     # statistics to normalize the incoming data, and scale and shift the        #
     # normalized data using gamma and beta.                                     #
@@ -176,18 +176,36 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # the momentum variable to update the running mean and running variance,    #
     # storing your result in the running_mean and running_var variables.        #
     #############################################################################
-    pass
+    cache = {}
+    cache['x'] = x
+    x_mean = x.mean(axis=0)
+    cache['x_mean'] = x_mean
+    x_var = x.var(axis=0)
+    cache['x_var'] = x_var
+    h1 = (x-x_mean)
+    h2 = np.sqrt(x_var+eps)
+    cache['h1'] = h1
+    cache['h2'] = h2
+    cache['eps'] = eps
+    normalized = h1 / h2
+    cache['normalized'] = normalized
+    out = gamma*normalized + beta
+    cache['gamma'] = gamma
+    cache['beta'] = beta
+    running_mean = momentum * running_mean + (1 - momentum) * x_mean
+    running_var = momentum * running_var + (1 - momentum) * x_var
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
   elif mode == 'test':
     #############################################################################
-    # TODO: Implement the test-time forward pass for batch normalization. Use   #
+    # Implement the test-time forward pass for batch normalization. Use   #
     # the running mean and variance to normalize the incoming data, then scale  #
     # and shift the normalized data using gamma and beta. Store the result in   #
     # the out variable.                                                         #
     #############################################################################
-    pass
+    normalized = (x-running_mean)/np.sqrt(running_var)
+    out = gamma*normalized + beta
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -223,7 +241,28 @@ def batchnorm_backward(dout, cache):
   # TODO: Implement the backward pass for batch normalization. Store the      #
   # results in the dx, dgamma, and dbeta variables.                           #
   #############################################################################
-  pass
+  dgamma = (cache['normalized'] * dout).sum(axis=0)
+  dbeta = dout.sum(axis=0)
+  
+  #Layer: normalized
+  dnormalized =  cache['gamma'] * dout
+  
+  #Layer h1 is the shifted x-es (x-x_mean_)
+  dh1 = 1./cache['h2'] * dnormalized
+  #Layer: h2 is the sqrt of the var
+  dh2 = (-cache['h1']/np.square(cache['h2']) * dnormalized).sum(axis=0)
+  
+  #Layer: Variance
+  dvar = 0.5/np.sqrt(cache['x_var']+cache['eps']) * dh2
+  
+  #Layer: mean. this has arrows to h1 and var, but the local derivative of var wrt mean is zero
+  dmean = (-1 * dh1).sum(axis=0) #+ 0 * dvar
+  
+  #Layer; x has arrows to mean, var and h1
+  n = dout.shape[0]
+  dx = 1./n * dmean + 1./n*(2*cache['x']-2*cache['x_mean']) * dvar + 1 * dh1
+  
+  
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -253,7 +292,11 @@ def batchnorm_backward_alt(dout, cache):
   # should be able to compute gradients with respect to the inputs in a       #
   # single statement; our implementation fits on a single 80-character line.  #
   #############################################################################
-  pass
+  dgamma = (cache['normalized'] * dout).sum(axis=0)
+  dbeta = dout.sum(axis=0)
+  S = cache['x_var']+cache['eps']
+  n = dout.shape[0]
+  dx = cache['gamma'] * dout * ( 1. - 1/n - np.square(cache['x']-cache['x_mean'])/(n*S) ) / np.sqrt(S)
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
