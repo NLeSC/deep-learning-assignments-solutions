@@ -143,7 +143,7 @@ class FullyConnectedNet(object):
 
   def __init__(self, hidden_dims, input_dim=3*32*32, num_classes=10,
                dropout=0, use_batchnorm=False, reg=0.0,
-               weight_scale=1e-2, dtype=np.float32, seed=None):
+               weight_scale=1e-2, dtype=np.float32, seed=None, verbose = False):
     """
     Initialize a new FullyConnectedNet.
     
@@ -183,7 +183,22 @@ class FullyConnectedNet(object):
     # beta2, etc. Scale parameters should be initialized to one and shift      #
     # parameters should be initialized to zero.                                #
     ############################################################################
-    pass
+
+    dims = []
+    dims.append(input_dim)
+    dims.extend(hidden_dims)
+    dims.append(num_classes)
+
+    for layer_i in range(len(dims)):
+      if layer_i == 0:
+        # There's no layer with output 'input nodes'.
+        continue
+
+      if verbose:
+        print('Constructing layer ' + str(layer_i) + ' with ' + str(dims[layer_i - 1]) + ' inputs and ' + str(dims[layer_i]) + ' outputs.')
+      self.params['W' + str(layer_i)] = weight_scale * np.random.randn(dims[layer_i - 1], dims[layer_i])
+      self.params['b' + str(layer_i)] = np.zeros(dims[layer_i])
+
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
@@ -196,7 +211,7 @@ class FullyConnectedNet(object):
       self.dropout_param = {'mode': 'train', 'p': dropout}
       if seed is not None:
         self.dropout_param['seed'] = seed
-    
+
     # With batch normalization we need to keep track of running means and
     # variances, so we need to pass a special bn_param object to each batch
     # normalization layer. You should pass self.bn_params[0] to the forward pass
@@ -205,7 +220,7 @@ class FullyConnectedNet(object):
     self.bn_params = []
     if self.use_batchnorm:
       self.bn_params = [{'mode': 'train'} for i in xrange(self.num_layers - 1)]
-    
+
     # Cast all parameters to the correct datatype
     for k, v in self.params.iteritems():
       self.params[k] = v.astype(dtype)
@@ -223,7 +238,7 @@ class FullyConnectedNet(object):
     # Set train/test mode for batchnorm params and dropout param since they
     # behave differently during training and testing.
     if self.dropout_param is not None:
-      self.dropout_param['mode'] = mode   
+      self.dropout_param['mode'] = mode
     if self.use_batchnorm:
       for bn_param in self.bn_params:
         bn_param[mode] = mode
@@ -241,8 +256,33 @@ class FullyConnectedNet(object):
     # self.bn_params[1] to the forward pass for the second batch normalization #
     # layer, etc.                                                              #
     ############################################################################
-    pass
+
+
+    layer = {}
+    layer_cache = {}
+
+    for i in range(self.num_layers + 1):
+      if i == 0:
+        # 0th layer is trivial.
+        layer[i] = X
+        continue
+
+      input = layer[i - 1]
+      Wi = self.params['W' + str(i)]
+      bi = self.params['b' + str(i)]
+      if (i < self.num_layers):
+        # print('Forwarding afine layer ' + str(i) + ' with relu.')
+        layer[i], layer_cache[i] = affine_relu_forward(input, Wi, bi)
+      else:
+        # print('Forwarding affine layer ' + str(i) + '.')
+        layer[i], layer_cache[i] = affine_forward(input, Wi, bi)
+
+    scores = layer[self.num_layers]
+
+
     ############################################################################
+      # Skip the relu for the last layer
+
     #                             END OF YOUR CODE                             #
     ############################################################################
 
@@ -264,9 +304,48 @@ class FullyConnectedNet(object):
     # automated tests, make sure that your L2 regularization includes a factor #
     # of 0.5 to simplify the expression for the gradient.                      #
     ############################################################################
-    pass
+
+    dlayer = {}
+    dW = {}
+    db = {}
+    reg_loss = {}
+    reg_grad = {}
+
+    softmax_l, dsoftmax = softmax_loss(scores, y)
+    loss += softmax_l
+
+    dlayer[self.num_layers] = dsoftmax
+
+    for i in range(self.num_layers, -1, -1):
+      if i == 0:
+        # 0th layer is trivial.
+        layer[i] = X
+        continue
+
+      Wi_key = 'W' + str(i)
+      bi_key = 'b' + str(i)
+      W = self.params[Wi_key]
+      reg_loss[Wi_key]= self.reg * 0.5 * np.sum(W * W)
+      reg_grad[Wi_key] = self.reg * W
+      loss += reg_loss[Wi_key]
+
+      if (i < self.num_layers):
+        # print('Backwarding afine layer ' + str(i) + ' with relu.')
+        dlayer[i], dW[i], db[i] = affine_relu_backward(dlayer[i + 1], layer_cache[i])
+      else:
+        # print('Backwarding affine layer ' + str(i) + '.')
+        dlayer[i], dW[i], db[i] = affine_backward(dsoftmax, layer_cache[i])
+
+      grads[Wi_key] = reg_grad[Wi_key] + dW[i]
+      grads[bi_key] = db[i]
+
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
 
     return loss, grads
+
+  def regularization_loss(self, W):
+    loss = self.reg * 0.5 * np.sum(W * W)
+    dx = self.reg * W
+    return loss, dx
