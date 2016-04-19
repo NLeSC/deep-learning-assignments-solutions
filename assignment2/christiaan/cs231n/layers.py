@@ -170,7 +170,21 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # the momentum variable to update the running mean and running variance,    #
     # storing your result in the running_mean and running_var variables.        #
     #############################################################################
-    pass
+
+    sample_mean = np.mean(x, axis=0)
+    sample_var = np.var(x, axis=0)
+
+    running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+    running_var = momentum * running_var + (1 - momentum) * sample_var
+
+    a = x - sample_mean
+    c = sample_var + eps
+    c2 = np.sqrt(c)
+    b = 1/c2
+    x_hat = a * b
+    out = gamma * x_hat + beta
+
+    cache = (sample_mean, x_hat, beta, gamma, a, b, c, N, x)
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -181,7 +195,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # and shift the normalized data using gamma and beta. Store the result in   #
     # the out variable.                                                         #
     #############################################################################
-    pass
+    x_hat = (x - running_mean) / np.sqrt(running_var + eps)
+    out = gamma * x_hat + beta
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -217,7 +232,12 @@ def batchnorm_backward(dout, cache):
   # TODO: Implement the backward pass for batch normalization. Store the      #
   # results in the dx, dgamma, and dbeta variables.                           #
   #############################################################################
-  pass
+  sample_mean, x_hat, beta, gamma, a, b, c, N, x = cache
+
+  dx = (-b * gamma * dout / N) + (b * gamma * dout) + (-sample_mean * a * gamma * dout) / (N * c * np.sqrt(c))
+  print dx.shape, x.shape
+  dgamma = np.sum(x_hat * dout, axis=0)
+  dbeta = np.sum(dout, axis=0)
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
