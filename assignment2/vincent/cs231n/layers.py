@@ -65,8 +65,8 @@ def affine_backward(dout, cache):
   x_reshaped = x.reshape(N,np.product(x.shape[1:]))
   dw = dout.T.dot(x_reshaped).T #first 5,10 dot 10,6 and then transpose
   db = np.ones(N).dot(dout) #summing along one axis (the 10 examples) to get 5 bias updates
-  print "Shapes dout x w:", dout.shape, x.shape, w.shape
-  print "Shapes dw, db, dx", dw.shape, db.shape, dx.shape
+  #print "Shapes dout x w:", dout.shape, x.shape, w.shape
+  #print "Shapes dw, db, dx", dw.shape, db.shape, dx.shape
 
   pass
   #############################################################################
