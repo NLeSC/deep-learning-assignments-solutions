@@ -38,7 +38,7 @@ class TwoLayerNet(object):
     self.reg = reg
     
     ############################################################################
-    # TODO: Initialize the weights and biases of the two-layer net. Weights    #
+    # Initialize the weights and biases of the two-layer net. Weights    #
     # should be initialized from a Gaussian with standard deviation equal to   #
     # weight_scale, and biases should be initialized to zero. All weights and  #
     # biases should be stored in the dictionary self.params, with first layer  #
@@ -210,6 +210,7 @@ class FullyConnectedNet(object):
       self.dropout_param = {'mode': 'train', 'p': dropout}
       if seed is not None:
         self.dropout_param['seed'] = seed
+        
     
     # With batch normalization we need to keep track of running means and
     # variances, so we need to pass a special bn_param object to each batch
@@ -257,6 +258,7 @@ class FullyConnectedNet(object):
     ############################################################################
     inp = X
     cache = {}
+    cache_dropout = {}
     for layer in xrange(1, self.num_layers):
         Wi = self.params['W%i'%layer]
         bi = self.params['b%i'%layer]
@@ -267,7 +269,11 @@ class FullyConnectedNet(object):
             inp, cachei = affine_norm_relu_forward(inp, Wi, bi, gammai, betai, bn_paramsi)
         else:
             inp, cachei = affine_relu_forward(inp, Wi, bi)
+            
         cache[layer] = cachei
+        if self.use_dropout:
+            inp, cachei_dropout = dropout_forward(inp, self.dropout_param)
+            cache_dropout[layer] = cachei_dropout
     # The last layer is just an affine layer  
     Wi = self.params['W%i'%(self.num_layers)]
     bi = self.params['b%i'%(self.num_layers)]
@@ -309,6 +315,8 @@ class FullyConnectedNet(object):
     grads ['b%i'%(self.num_layers)] = db
     
     for layer in xrange(self.num_layers-1, 0, -1):
+        if self.use_dropout:
+            dl = dropout_backward(dl, cache_dropout[layer])
         if self.use_batchnorm:
             dl, dw, db, dgamma, dbeta = affine_norm_relu_backward(dl, cache[layer])
             grads['gamma%i'%layer] = dgamma
