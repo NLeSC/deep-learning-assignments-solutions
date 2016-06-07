@@ -504,10 +504,6 @@ def conv_backward_naive(dout, cache):
     #shape of db: (F,)  shape of dout: (N, F, HH, WW)
     db = dout.sum(axis=(0,2,3))
     #
-    # TODO: Implement the convolutional backward pass.                          #
-    #
-    pass
-    #
     # END OF YOUR CODE                              #
     #
     return dx, dw, db
@@ -528,11 +524,21 @@ def max_pool_forward_naive(x, pool_param):
     - out: Output data
     - cache: (x, pool_param)
     """
-    out = None
-    #
-    # TODO: Implement the max pooling forward pass                              #
-    #
-    pass
+    pool_height = pool_param["pool_height"]
+    pool_width = pool_param["pool_width"]
+    stride = pool_param["stride"]
+    N, C, H, W = x.shape
+
+    Hout = (H - pool_height)/stride + 1
+    Wout = (W - pool_width)/stride + 1
+    out = np.zeros((N, C, Hout, Wout))
+    for i in range(Hout):
+        upper = i*stride
+        lower = upper + pool_height
+        for j in range (Wout):
+            left = j*stride
+            right = left + pool_width
+            out[:, :, i, j] = x[:, :, upper:lower, left:right].max(axis=(2,3))
     #
     # END OF YOUR CODE                              #
     #
@@ -551,11 +557,27 @@ def max_pool_backward_naive(dout, cache):
     Returns:
     - dx: Gradient with respect to x
     """
-    dx = None
-    #
-    # TODO: Implement the max pooling backward pass                             #
-    #
-    pass
+    x, pool_param = cache
+    pool_height = pool_param["pool_height"]
+    pool_width = pool_param["pool_width"]
+    stride = pool_param["stride"]
+    N, C, H, W = x.shape
+    N, C, Hout, Wout = dout.shape
+
+    dx = np.zeros((N, C, H, W))
+    for i in range(Hout):
+        upper = i*stride
+        lower = upper + pool_height
+        for j in range (Wout):
+            left = j*stride
+            right = left + pool_width
+            # We need to do some nasty reshaping to find the maxindex
+            x_sub_reshaped = x[:, :, upper:lower, left:right].reshape(N*C, pool_height*pool_width)
+            maxindices = x_sub_reshaped.argmax(axis=1)
+            dx_sub_reshaped = np.zeros((N*C, pool_height*pool_width))
+            dx_sub_reshaped[range(N*C),maxindices] = dout[:, :, i, j].reshape(N*C)
+            dx[:, :, upper:lower, left:right] = dx_sub_reshaped.reshape(N, C, pool_height, pool_width)
+
     #
     # END OF YOUR CODE                              #
     #
