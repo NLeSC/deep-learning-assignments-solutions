@@ -477,22 +477,32 @@ def conv_backward_naive(dout, cache):
     F, C, HH, WW = w.shape
     N, F, Hout, Wout = dout.shape
     dx_padded = np.zeros((N, C, H+2*pad, W+2*pad))
+    x_padded = np.pad(
+        x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
     w_reshaped = np.reshape(w, (F, C * HH * WW))
-    print('w', w.shape)
+    dw_reshaped = np.zeros((F, C * HH * WW))
+    #print('w', w.shape)
     for i in range(0, Hout):
         top = i * stride
         bottom = top + HH
         for j in range(0, Wout):
             dout_ij = dout[:, :, i, j]
-            print('dout_ij', dout_ij.shape)
             left = j * stride
             right = left + WW
-            print('dx', dx_padded[:, :, top:bottom, left:right].shape)
             dx_sub =  dout_ij.dot(w_reshaped)
-            print('dx_sub', dx_sub.shape)
             dx_sub_reshaped = dx_sub.reshape(N, C, HH, WW)
             dx_padded[:, :, top:bottom, left:right] +=dx_sub_reshaped
+
+            # x_sub has dim (N, C*HH*WW),
+            # dout_ij has dimension (N, F)
+            # dw_reshaped has dim (F, C*HH*WW)
+            x_sub_reshaped = x_padded[:, :, top:bottom, left:right].reshape(N, C*HH*WW)
+            dw_reshaped += dout_ij.T.dot(x_sub_reshaped)
     dx = dx_padded[:, :, pad:-pad, pad:-pad]
+    dw = dw_reshaped.reshape((F, C, HH, WW))
+
+    #shape of db: (F,)  shape of dout: (N, F, HH, WW)
+    db = dout.sum(axis=(0,2,3))
     #
     # TODO: Implement the convolutional backward pass.                          #
     #
