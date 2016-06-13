@@ -47,8 +47,8 @@ class TwoLayerNet(object):
     ############################################################################
     W1 = np.random.randn(input_dim,hidden_dim) * weight_scale
     W2 = np.random.randn(hidden_dim,num_classes) * weight_scale
-    b1 = np.zeros(num_classes)
-    b2 = np.zeros(hidden_dim)
+    b1 = np.zeros(hidden_dim)
+    b2 = np.zeros(num_classes)
     self.params = {
         'W1': W1,
         'W2': W2,
@@ -89,7 +89,13 @@ class TwoLayerNet(object):
     b1 = self.params['b1']
     b2 = self.params['b2']
 
-    layer1 = X.dot(W1) + b1      # Forward 1st layer
+    N = X.shape[0]
+    D = np.prod(X.shape[1:])
+    assert D==W1.shape[0]  # Dimension of inputs should match dimension of weights
+    assert W1.shape[1]==b1.shape[0] # M of weights should match M of bias
+    X1 = X.reshape(N, D)
+
+    layer1 = X1.dot(W1) + b1     # Forward 1st layer
     layer1[layer1<0] = 0         # ReLU
     layer2 = layer1.dot(W2) + b2 # Forward 2nd layer
     scores = layer2              # This seems correct, but maybe check why ReLU only on first layer
@@ -113,7 +119,6 @@ class TwoLayerNet(object):
     # of 0.5 to simplify the expression for the gradient.                      #
     ############################################################################
     # N is the Number of samples in training batch
-    N = X.shape[0]
     maxScores = scores.max()
     fj = (scores - maxScores).T      # normalize Scores
     fyi = fj[y,range(N)]             # correct scores
@@ -141,7 +146,7 @@ class TwoLayerNet(object):
     dLayer1[layer1<=0] = 0
 
     db1 = dLayer1.sum(axis=0)
-    dW1 = dLayer1.T.dot(X).T + self.reg*W1
+    dW1 = dLayer1.T.dot(X1).T + self.reg*W1
 
     assert db2.shape==b2.shape
     assert dW2.shape==W2.shape
@@ -219,7 +224,14 @@ class FullyConnectedNet(object):
     # beta2, etc. Scale parameters should be initialized to one and shift      #
     # parameters should be initialized to zero.                                #
     ############################################################################
-    pass
+    prev_layer_dim = input_dim
+    for i,layer_dim in enumerate(hidden_dims + [num_classes]):
+        WI = np.random.randn(prev_layer_dim,layer_dim) * weight_scale
+        bI = np.zeros(layer_dim)
+        self.params['W%d'%(i+1)] = WI
+        self.params['b%d'%(i+1)] = bI
+        prev_layer_dim = layer_dim
+    # TODO: Init batch normalization stuff...
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
@@ -277,7 +289,22 @@ class FullyConnectedNet(object):
     # self.bn_params[1] to the forward pass for the second batch normalization #
     # layer, etc.                                                              #
     ############################################################################
-    pass
+    layerI = X
+    cache = {}
+
+    for i in range(self.num_layers-1):
+        WI = self.params['W%i'%(i+1)]
+        bI = self.params['b%i'%(i+1)]
+
+        layerI, cacheI =  affine_relu_forward(layerI, WI, bI)
+        cache[i] = cacheI
+
+    WI = self.params['W%i'%(self.num_layers)]
+    bI = self.params['b%i'%(self.num_layers)]
+    scores, cacheI = affine_forward(layerI, WI, bI)
+    cache[i] = cacheI
+
+    # TODO: include batchnorm stuff
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
