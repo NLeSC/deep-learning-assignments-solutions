@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def affine_forward(x, w, b):
     """
     Computes the forward pass for an affine (fully-connected) layer.
@@ -423,23 +422,16 @@ def conv_forward_naive(x, w, b, conv_param):
     #                   sel = (n,c,range((ho*stride),(ho*stride+HH)),range((wo*stride),(wo*stride+WW)))
     #                   #print sel
     #                   out[n,f,ho,wo] = np.sum( xpadded[sel] * w[f,c,:,:]) + b[f]
-
     N, C, H, W = x.shape
     F, C, HH, WW = w.shape
     stride = conv_param['stride']
     pad = conv_param['pad']
     x_padded = np.pad(
         x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
-
     Hout = 1 + (H + 2 * pad - HH) / stride
     Wout = 1 + (W + 2 * pad - WW) / stride
-
     out = np.zeros((N, F, Hout, Wout))
-
     w_reshaped = np.reshape(w, (F, C * HH * WW)).transpose()
-    # print('x_padded',x_padded.shape)
-    # print('w', w.shape)
-    # print('w_reshaped', w_reshaped.shape)
     for i in range(0, Hout):
         top = i * stride
         bottom = top + HH
@@ -448,10 +440,7 @@ def conv_forward_naive(x, w, b, conv_param):
             right = left + WW
             x_sub = x_padded[:, :, top:bottom, left:right]
             x_sub_reshaped = np.reshape(x_sub, (N, C * HH * WW))
-            # print('x_sub',x_sub.shape)
-            # print('x_sub_reshaped',x_sub_reshaped.shape)
             out[:, :, i, j] = x_sub_reshaped.dot(w_reshaped) + b
-            # print out
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -472,10 +461,42 @@ def conv_backward_naive(dout, cache):
     - db: Gradient with respect to b
     """
     dx, dw, db = None, None, None
+    out = None
     #############################################################################
     # TODO: Implement the convolutional backward pass.                          #
     #############################################################################
-    pass
+    #dx, dw, db = None, None, None
+    x, w, b, conv_param = cache
+    pad = conv_param['pad']
+    stride = conv_param['stride']
+    N, C, H, W = x.shape
+    F, C, HH, WW = w.shape
+    N, F, Hout, Wout = dout.shape
+    dx_padded = np.zeros((N, C, H+2*pad, W+2*pad))
+    x_padded = np.pad(
+        x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
+    w_reshaped = np.reshape(w, (F, C * HH * WW))
+    dw_reshaped = np.zeros((F, C * HH * WW))
+    #print('w', w.shape)
+    for i in range(0, Hout):
+        top = i * stride
+        bottom = top + HH
+        for j in range(0, Wout):
+            dout_ij = dout[:, :, i, j]
+            left = j * stride
+            right = left + WW
+            dx_sub =  dout_ij.dot(w_reshaped)
+            dx_sub_reshaped = dx_sub.reshape(N, C, HH, WW)
+            dx_padded[:, :, top:bottom, left:right] +=dx_sub_reshaped
+            # x_sub has dim (N, C*HH*WW),
+            # dout_ij has dimension (N, F)
+            # dw_reshaped has dim (F, C*HH*WW)
+            x_sub_reshaped = x_padded[:, :, top:bottom, left:right].reshape(N, C*HH*WW)
+            dw_reshaped += dout_ij.T.dot(x_sub_reshaped)
+    dx = dx_padded[:, :, pad:-pad, pad:-pad]
+    dw = dw_reshaped.reshape((F, C, HH, WW))
+    #shape of db: (F,)  shape of dout: (N, F, HH, WW)
+    db = dout.sum(axis=(0,2,3))
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -500,7 +521,20 @@ def max_pool_forward_naive(x, pool_param):
     #############################################################################
     # TODO: Implement the max pooling forward pass                              #
     #############################################################################
-    pass
+    N, C, H, W = x.shape
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+    stride = pool_param['stride']
+    W2 = (W - pool_width) / stride + 1
+    H2 = (H - pool_height) / stride + 1
+    out = np.zeros((N, C, H2, W2))
+    for i in range(W2):
+        top = i * stride
+        bottom = top + pool_height
+        for j in range(H2):
+            left = j * stride
+            right = left + pool_width
+            out[:,:,i,j] = x[:, :, top:bottom, left:right].max(axis=(2,3))
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -522,7 +556,34 @@ def max_pool_backward_naive(dout, cache):
     #############################################################################
     # TODO: Implement the max pooling backward pass                             #
     #############################################################################
-    pass
+    x, pool_param = cache
+    pool_height = pool_param["pool_height"]
+    pool_width = pool_param["pool_width"]
+    stride = pool_param["stride"]
+    N, C, H, W = x.shape
+    N, C, Hout, Wout = dout.shape
+    dx = np.zeros((N, C, H, W))
+    for i in range(Hout):
+        upper = i*stride
+        lower = upper + pool_height
+        for j in range (Wout):
+            left = j*stride
+            right = left + pool_width
+
+            # Reshape to find the maxindex (by Carlos)
+            #x_sub_reshaped = x[:, :, upper:lower, left:right].reshape(N*C, pool_height*pool_width)
+            #maxindices = x_sub_reshaped.argmax(axis=1)
+            #dx_sub_reshaped = np.zeros((N*C, pool_height*pool_width))
+            #dx_sub_reshaped[range(N*C),maxindices] = dout[:, :, i, j].reshape(N*C)
+            #dx[:, :, upper:lower, left:right] = dx_sub_reshaped.reshape(N, C, pool_height, pool_width)
+
+            # without reshaping matrix would require loops (it works though)
+            for ni in range(N):
+                for ci in range(C):
+                    mypool = xsub = np.zeros((pool_height,pool_width))
+                    xsub = x[ni,ci, upper:lower, left:right] #take pool out of x
+                    mypool[np.unravel_index(xsub.argmax(),xsub.shape)] = dout[ni,ci, i, j]
+                    dx[ni,ci,upper:lower,left:right] = mypool #xzer is pool of zeros with one non-zero value per pool
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
