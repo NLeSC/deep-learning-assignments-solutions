@@ -577,9 +577,10 @@ def conv_backward_naive(dout, cache):
 
     kernel_size = C * HH * WW
 
-    convolution = np.reshape(w.transpose((0,1,3,2)), (F, kernel_size))
-    dout_padded = np.pad(dout, ((0, 0), (0, 0), (pad, pad), (pad, pad)), 'constant', constant_values=0)
-    print dout_padded, dout_padded.shape
+    dx_padded = np.zeros((N, C, H + 2 * pad, W + 2 * pad))
+    convolution = np.reshape(w, (F, kernel_size))
+    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), 'constant', constant_values=0)
+    dw_reshaped = np.zeros((F, kernel_size))
     for i in range(H_out):
         top = i * stride
         bottom = top + HH
@@ -587,13 +588,21 @@ def conv_backward_naive(dout, cache):
             left = j * stride
             right = left + WW
 
-            #view = np.reshape(dout_padded, (N, kernel_size))
+            dout_ij = dout[:, :, i, j]
 
+            dx_sub = dout_ij.dot(convolution)
+            dx_sub_reshaped = dx_sub.reshape(N, C, HH, WW)
+            dx_padded[:, :, top:bottom, left:right] += dx_sub_reshaped
 
-            #dx[:, :, i, j] = view.dot(convolution.T)
-            #dw[:, :, i, j] = view.dot(X)
+            # x_sub has dim (N, C*HH*WW),
+            # dout_ij has dimension (N, F)
+            # dw_reshaped has dim (F, C*HH*WW)
+            x_sub_reshaped = x_padded[:, :, top:bottom, left:right].reshape(N, C * HH * WW)
+            dw_reshaped += dout_ij.T.dot(x_sub_reshaped)
 
-    db = dout
+    dx = dx_padded[:, :, pad:-pad, pad:-pad]
+    dw = dw_reshaped.reshape((F, C, HH, WW))
+    db = dout.sum(axis=(0, 2, 3))
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -615,11 +624,24 @@ def max_pool_forward_naive(x, pool_param):
     - out: Output data
     - cache: (x, pool_param)
     """
-    out = None
+    N, C, H, W = x.shape
+    pool_height, pool_width, stride = pool_param['pool_height'], pool_param['pool_width'], pool_param['stride']
+
+    W_out = ((W - pool_width) / stride) + 1
+    H_out = ((H - pool_height) / stride) + 1
+
+    out = np.zeros((N, C, H_out, W_out))
     #############################################################################
     # TODO: Implement the max pooling forward pass                              #
     #############################################################################
-    pass
+    for i in range(H_out):
+        top = i * stride
+        bottom = top + pool_height
+        for j in range(W_out):
+            left = j * stride
+            right = left + pool_width
+
+            out[:, :, i, j] = x[:, :, top:bottom, left:right].max(axis=(2, 3))
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -638,11 +660,34 @@ def max_pool_backward_naive(dout, cache):
     Returns:
     - dx: Gradient with respect to x
     """
-    dx = None
+    x, pool_param = cache
+    N, C, H, W = x.shape
+    pool_height, pool_width, stride = pool_param['pool_height'], pool_param['pool_width'], pool_param['stride']
+
+    W_out = ((W - pool_width) / stride) + 1
+    H_out = ((H - pool_height) / stride) + 1
+
+    dx = np.zeros((N, C, H, W))
     #############################################################################
     # TODO: Implement the max pooling backward pass                             #
     #############################################################################
-    pass
+    for i in range(H_out):
+        top = i * stride
+        bottom = top + pool_height
+        for j in range(W_out):
+            left = j * stride
+            right = left + pool_width
+
+            dout_ij = dout[:, :, i, j].reshape(N*C)
+            view = x[:, :, top:bottom, left:right].reshape((N * C, pool_height*pool_width))
+            dx_view = dx[:, :, top:bottom, left:right].reshape((N * C, pool_height*pool_width)).T
+
+            pos = np.argmax(view, axis=1)
+
+            dx_view[pos, range(N * C)] += dout_ij
+
+            dx_view_unfucked = dx_view.T.reshape(N, C, pool_height, pool_width)
+            dx[:, :, top:bottom, left:right] += dx_view_unfucked
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
