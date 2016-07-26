@@ -135,11 +135,29 @@ class CaptioningRNN(object):
     # defined above to store loss and gradients; grads[k] should give the      #
     # gradients for self.params[k].                                            #
     ############################################################################
-    pass
+    # Affine layer
+    affine_out, affine_cache = affine_forward(features, W_proj, b_proj)
+    # Word embedding layer
+    embed_out, embed_cache = word_embedding_forward(captions_in, W_embed)
+    # RNN layer
+    rnn_out, rnn_cache = rnn_forward(embed_out, affine_out, Wx, Wh, b)
+    # Temporal affine
+    temp_out, temp_cache = temporal_affine_forward(rnn_out, W_vocab, b_vocab)
+    # Softmax
+    loss, dtemp = temporal_softmax_loss(temp_out, captions_out, mask)
+
+    #Backward
+    #temporal affine
+    drnn, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dtemp, temp_cache)
+    # RNN
+    dembed, daffine, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(drnn, rnn_cache)
+    # Word ebedding
+    grads['W_embed'] = word_embedding_backward(dembed, embed_cache)
+    dx, grads['W_proj'], grads['b_proj'] = affine_backward(daffine, affine_cache)
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
-    
+
     return loss, grads
 
 
@@ -175,7 +193,7 @@ class CaptioningRNN(object):
     W_embed = self.params['W_embed']
     Wx, Wh, b = self.params['Wx'], self.params['Wh'], self.params['b']
     W_vocab, b_vocab = self.params['W_vocab'], self.params['b_vocab']
-    
+
     ###########################################################################
     # TODO: Implement test-time sampling for the model. You will need to      #
     # initialize the hidden state of the RNN by applying the learned affine   #
@@ -197,7 +215,23 @@ class CaptioningRNN(object):
     # functions; you'll need to call rnn_step_forward or lstm_step_forward in #
     # a loop.                                                                 #
     ###########################################################################
-    pass
+    prev_word = self._start*np.ones((N, 1), dtype=np.int32)
+    # Affine layer
+    prev_h, affine_cache = affine_forward(features, W_proj, b_proj)
+    for t in range(max_length):
+      # Word embedding layer
+      embed_out, embed_cache = word_embedding_forward(prev_word, W_embed)
+      # fix the shape, word embedding forward doesn't support non sequences
+      # so it outputs a dimension too many. This line corrects it.
+      s = embed_out.shape
+      embed_out = embed_out.reshape((s[0],s[2]))
+      # RNN layer
+      next_h, cache = rnn_step_forward(embed_out, prev_h, Wx, Wh, b)
+      prev_h = next_h
+      # Temporal affine
+      scores, temp_cache = affine_forward(next_h, W_vocab, b_vocab)
+      captions[:, t] = scores.argmax(axis=1)
+      prev_word = captions[:, t].reshape(N, 1)
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
