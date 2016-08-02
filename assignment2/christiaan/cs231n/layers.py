@@ -171,24 +171,25 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # storing your result in the running_mean and running_var variables.        #
     #############################################################################
 
-    cache = {}
-    cache['x'] = x
     x_mean = x.mean(axis=0)
-    cache['x_mean'] = x_mean
     x_var = x.var(axis=0)
-    cache['x_var'] = x_var
     h1 = (x-x_mean)
     h2 = np.sqrt(x_var+eps)
+    normalized = h1 / h2
+    out = gamma*normalized + beta
+    running_mean = momentum * running_mean + (1 - momentum) * x_mean
+    running_var = momentum * running_var + (1 - momentum) * x_var
+
+    cache = {}
+    cache['x'] = x
+    cache['x_mean'] = x_mean
+    cache['x_var'] = x_var
+    cache['normalized'] = normalized
+    cache['gamma'] = gamma
+    cache['beta'] = beta
     cache['h1'] = h1
     cache['h2'] = h2
     cache['eps'] = eps
-    normalized = h1 / h2
-    cache['normalized'] = normalized
-    out = gamma*normalized + beta
-    cache['gamma'] = gamma
-    cache['beta'] = beta
-    running_mean = momentum * running_mean + (1 - momentum) * x_mean
-    running_var = momentum * running_var + (1 - momentum) * x_var
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
