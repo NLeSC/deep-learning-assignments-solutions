@@ -215,16 +215,18 @@ class CaptioningRNN(object):
     # functions; you'll need to call rnn_step_forward or lstm_step_forward in #
     # a loop.                                                                 #
     ###########################################################################
-    prev_word = self._start*np.ones((N, 1), dtype=np.int32)
+    prev_word = self._start * np.ones((N, 1), dtype=np.int32)
     # Affine layer
     prev_h, affine_cache = affine_forward(features, W_proj, b_proj)
     for t in range(max_length):
-      print('prev_h', prev_h.shape)
       # Word embedding layer
       embed_out, embed_cache = word_embedding_forward(prev_word, W_embed)
+      # fix the shape, word embedding forward doesn't support non sequences
+      # so it outputs a dimension too many. This line corrects it.
+      s = embed_out.shape
+      embed_out = embed_out.reshape((s[0], s[2]))
       # RNN layer
       next_h, cache = rnn_step_forward(embed_out, prev_h, Wx, Wh, b)
-      print('next_h', next_h.shape)
       prev_h = next_h
       # Temporal affine
       scores, temp_cache = affine_forward(next_h, W_vocab, b_vocab)
