@@ -139,8 +139,9 @@ class CaptioningRNN(object):
     affine_out, affine_cache = affine_forward(features, W_proj, b_proj)
     # Word embedding layer
     embed_out, embed_cache = word_embedding_forward(captions_in, W_embed)
-    # RNN layer
-    rnn_out, rnn_cache = rnn_forward(embed_out, affine_out, Wx, Wh, b)
+    # Recurrent layer
+    recurrent_forward = {'rnn':rnn_forward, 'lstm':lstm_forward}[self.cell_type]
+    rnn_out, rnn_cache = recurrent_forward(embed_out, affine_out, Wx, Wh, b)
     # Temporal affine
     temp_out, temp_cache = temporal_affine_forward(rnn_out, W_vocab, b_vocab)
     # Softmax
@@ -149,8 +150,9 @@ class CaptioningRNN(object):
     #Backward
     #temporal affine
     drnn, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dtemp, temp_cache)
-    # RNN
-    dembed, daffine, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(drnn, rnn_cache)
+    # Recurrent
+    recurrent_backward = {'rnn': rnn_backward, 'lstm': lstm_backward}[self.cell_type]
+    dembed, daffine, grads['Wx'], grads['Wh'], grads['b'] = recurrent_backward(drnn, rnn_cache)
     # Word ebedding
     grads['W_embed'] = word_embedding_backward(dembed, embed_cache)
     dx, grads['W_proj'], grads['b_proj'] = affine_backward(daffine, affine_cache)
@@ -218,6 +220,8 @@ class CaptioningRNN(object):
     prev_word = self._start*np.ones((N, 1), dtype=np.int32)
     # Affine layer
     prev_h, affine_cache = affine_forward(features, W_proj, b_proj)
+    H, _ = Wh.shape
+    prev_c = np.zeros((N, H))
     for t in range(max_length):
       # Word embedding layer
       embed_out, embed_cache = word_embedding_forward(prev_word, W_embed)
@@ -225,9 +229,16 @@ class CaptioningRNN(object):
       # so it outputs a dimension too many. This line corrects it.
       s = embed_out.shape
       embed_out = embed_out.reshape((s[0],s[2]))
-      # RNN layer
-      next_h, cache = rnn_step_forward(embed_out, prev_h, Wx, Wh, b)
-      prev_h = next_h
+      # Recurrent Layer
+      if(self.cell_type == 'lstm'):
+        # LSTM layer
+        next_h, next_c, cache = lstm_step_forward(embed_out, prev_h, prev_c, Wx, Wh, b)
+        prev_h = next_h
+        prev_c = next_c
+      else:
+        # RNN layer
+        next_h, cache = rnn_step_forward(embed_out, prev_h, Wx, Wh, b)
+        prev_h = next_h
       # Temporal affine
       scores, temp_cache = affine_forward(next_h, W_vocab, b_vocab)
       captions[:, t] = scores.argmax(axis=1)
