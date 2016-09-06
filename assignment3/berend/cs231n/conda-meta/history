@@ -1,0 +1,5 @@
+==> 2016-09-02 11:00:59 <==
+# cmd: /home/bweel/Documents/projects/cs231n/deep-learning-assignments-solutions/assignment3/berend/cs231n/bin/conda install openblas
+libgfortran-3.0.0-1
+openblas-0.2.14-4
+# install specs: ['openblas']
